@@ -90,7 +90,7 @@
 <meta property="og:image" content="http://chuantu.biz/t6/311/1526374665x-1404764816.png">
 <meta property="og:image" content="http://chuantu.biz/t6/311/1526371248x-1566657591.png">
 <meta property="og:image" content="http://chuantu.biz/t6/311/1526372758x-1566657591.png">
-<meta property="og:updated_time" content="2018-05-15T09:36:46.958Z">
+<meta property="og:updated_time" content="2018-05-15T09:46:22.396Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="跨机房RabbitMQ集群-去中心化架构设计">
 <meta name="twitter:description" content="前言消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。但这些其实并不是触动我们需要换MQ的因素，最大的因素是消息会丢（听说）。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好">
@@ -367,14 +367,20 @@
 <li>消息规则</li>
 <li>负载均衡</li>
 <li>幂等机制</li>
-<li>监控方案<h5 id="MQSDK封装"><a href="#MQSDK封装" class="headerlink" title="MQSDK封装"></a>MQSDK封装</h5></li>
+<li>监控方案</li>
+</ul>
+<h5 id="MQSDK封装"><a href="#MQSDK封装" class="headerlink" title="MQSDK封装"></a>MQSDK封装</h5><ul>
 <li>消息分发/消费SDK</li>
 <li>负载均衡策略</li>
 <li>队列/交换器适配</li>
-<li>重复校验判定<h5 id="MQ监控"><a href="#MQ监控" class="headerlink" title="MQ监控"></a>MQ监控</h5></li>
+<li>重复校验判定</li>
+</ul>
+<h5 id="MQ监控"><a href="#MQ监控" class="headerlink" title="MQ监控"></a>MQ监控</h5><ul>
 <li>消息轨迹跟踪</li>
 <li>消息堆积报警</li>
-<li>消费异常报警<h5 id="预发布-试运行"><a href="#预发布-试运行" class="headerlink" title="预发布/试运行"></a>预发布/试运行</h5></li>
+<li>消费异常报警</li>
+</ul>
+<h5 id="预发布-试运行"><a href="#预发布-试运行" class="headerlink" title="预发布/试运行"></a>预发布/试运行</h5><ul>
 <li>线上指标数据测试</li>
 <li>线上原有消息过渡方案</li>
 </ul>
@@ -534,7 +540,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">6</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">标签</span>
                 </a>
               </div>
