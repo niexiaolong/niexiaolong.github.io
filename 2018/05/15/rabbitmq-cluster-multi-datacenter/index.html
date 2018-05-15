@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="Hexo, NexT" />
+  <meta name="keywords" content="RabbitMQ,架构设计," />
 
 
 
@@ -79,16 +79,22 @@
 
 
 
-<meta name="description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
-<meta property="og:type" content="website">
-<meta property="og:title" content="nxl&#39;s Home">
-<meta property="og:url" content="http://yoursite.com/index.html">
+<meta name="description" content="前言消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。但这些其实并不是触动我们需要换MQ的因素，最大的因素是消息会丢（听说）。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好">
+<meta name="keywords" content="RabbitMQ,架构设计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="跨机房RabbitMQ集群-去中心化架构设计">
+<meta property="og:url" content="http://yoursite.com/2018/05/15/rabbitmq-cluster-multi-datacenter/index.html">
 <meta property="og:site_name" content="nxl&#39;s Home">
-<meta property="og:description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
+<meta property="og:description" content="前言消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。但这些其实并不是触动我们需要换MQ的因素，最大的因素是消息会丢（听说）。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://chuantu.biz/t6/311/1526374665x-1404764816.png">
+<meta property="og:image" content="http://chuantu.biz/t6/311/1526371248x-1566657591.png">
+<meta property="og:image" content="http://chuantu.biz/t6/311/1526372758x-1566657591.png">
+<meta property="og:updated_time" content="2018-05-15T09:36:46.958Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="nxl&#39;s Home">
-<meta name="twitter:description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
+<meta name="twitter:title" content="跨机房RabbitMQ集群-去中心化架构设计">
+<meta name="twitter:description" content="前言消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。但这些其实并不是触动我们需要换MQ的因素，最大的因素是消息会丢（听说）。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好">
+<meta name="twitter:image" content="http://chuantu.biz/t6/311/1526374665x-1404764816.png">
 
 
 
@@ -118,13 +124,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/"/>
+  <link rel="canonical" href="http://yoursite.com/2018/05/15/rabbitmq-cluster-multi-datacenter/"/>
 
 
 
 
 
-  <title>nxl's Home</title>
+  <title>跨机房RabbitMQ集群-去中心化架构设计 | nxl's Home</title>
   
 
 
@@ -143,8 +149,7 @@
     
   
 
-  <div class="container sidebar-position-left 
-  page-home">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -237,9 +242,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
 
@@ -269,9 +274,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2018/05/15/rabbitmq-cluster-multi-datacenter/" itemprop="url">跨机房RabbitMQ集群-去中心化架构设计</a></h1>
+          <h1 class="post-title" itemprop="name headline">跨机房RabbitMQ集群-去中心化架构设计</h1>
         
 
         <div class="post-meta">
@@ -343,9 +346,7 @@
       
 
       
-        
-          
-            <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。<br><img src="http://chuantu.biz/t6/311/1526374665x-1404764816.png" alt="image"><br>但这些其实并不是触动我们需要换MQ的因素，<strong>最大的因素是消息会丢（听说）</strong>。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好多消息了，但消费的日志就一直没打印过，并且到线上去查一下，发现队列又是空的。他们怀疑说是KEY太多了导致出现了LRU（就算LRU不应该是KEY直接没吗，怎么还留个空key？），并且说Redis本身也不是专业做队列的（这倒是认同），并且我们量大了，我们迟早也需要引入更专业的MQ（确实也如此）</p>
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。<br><img src="http://chuantu.biz/t6/311/1526374665x-1404764816.png" alt="image"><br>但这些其实并不是触动我们需要换MQ的因素，<strong>最大的因素是消息会丢（听说）</strong>。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好多消息了，但消费的日志就一直没打印过，并且到线上去查一下，发现队列又是空的。他们怀疑说是KEY太多了导致出现了LRU（就算LRU不应该是KEY直接没吗，怎么还留个空key？），并且说Redis本身也不是专业做队列的（这倒是认同），并且我们量大了，我们迟早也需要引入更专业的MQ（确实也如此）</p>
 <p>于是就开始了RabbitMQ的挖坑之旅。PS.有老铁知道上述可能导致的原因的，请告知我（别问我到底怎么丢的，我也母鸡啊，来了听他们说。我也就只知道这些信息 o(╥﹏╥)o）</p>
 <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>公司业务部署在上海、无锡、深圳，3个机房。估计是为了异地多活或考虑到延迟性（多半后者），我们的项目部在了这3个机房。由于支付在上海，所以与支付相关的，比如订单模块，我们就部署在上海，而上海机器又不多。<br>这样在跨机房背景下，我们其实并不是每个机房都有一套完备的服务</p>
 <p>MQ集群的部署，不仅考虑高可用，就还得考虑这个跨机房问题了。</p>
@@ -378,8 +379,6 @@
 <li>线上原有消息过渡方案</li>
 </ul>
 
-          
-        
       
     </div>
     
@@ -389,19 +388,56 @@
     
 
     
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>打赏</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="http://chuantu.biz/t6/307/1525935698x-1566657591.jpg" alt="聂晓龙 微信支付"/>
+        <p>微信支付</p>
+      </div>
+    
+
+    
+      <div id="alipay" style="display: inline-block">
+        <img id="alipay_qr" src="http://chuantu.biz/t6/307/1525935724x-1404764816.jpg" alt="聂晓龙 支付宝"/>
+        <p>支付宝</p>
+      </div>
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
 
     
 
     <footer class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/RabbitMQ/" rel="tag"># RabbitMQ</a>
+          
+            <a href="/tags/架构设计/" rel="tag"># 架构设计</a>
+          
+        </div>
+      
+
+      
+      
+      
 
       
 
       
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </div>
@@ -411,10 +447,11 @@
   </article>
 
 
-    
-  </section>
 
-  
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
@@ -422,6 +459,10 @@
 
 
           
+
+  
+
+
 
         </div>
         
@@ -442,8 +483,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -517,6 +567,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#背景"><span class="nav-number">2.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#集群架构"><span class="nav-number">3.</span> <span class="nav-text">集群架构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#主从架构（常见）"><span class="nav-number">3.0.1.</span> <span class="nav-text">主从架构（常见）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#去中心化架构"><span class="nav-number">3.0.2.</span> <span class="nav-text">去中心化架构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#场景分析"><span class="nav-number">3.1.</span> <span class="nav-text">场景分析</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-消息写入逻辑"><span class="nav-number">3.1.0.0.1.</span> <span class="nav-text">1.消息写入逻辑</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-消息同步逻辑"><span class="nav-number">3.1.0.0.2.</span> <span class="nav-text">2.消息同步逻辑</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-消息负载均衡"><span class="nav-number">3.1.0.0.3.</span> <span class="nav-text">3.消息负载均衡</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-消息重复消费"><span class="nav-number">3.1.0.0.4.</span> <span class="nav-text">4.消息重复消费</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-同步通道单点隐患"><span class="nav-number">3.1.0.0.5.</span> <span class="nav-text">5.同步通道单点隐患</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实施细节"><span class="nav-number">3.2.</span> <span class="nav-text">实施细节</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#前期细化方案的确立"><span class="nav-number">3.2.0.0.1.</span> <span class="nav-text">前期细化方案的确立</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#MQSDK封装"><span class="nav-number">3.2.0.0.2.</span> <span class="nav-text">MQSDK封装</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#MQ监控"><span class="nav-number">3.2.0.0.3.</span> <span class="nav-text">MQ监控</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#预发布-试运行"><span class="nav-number">3.2.0.0.4.</span> <span class="nav-text">预发布/试运行</span></a></li></ol></li></ol></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -657,6 +723,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
 
   
 
