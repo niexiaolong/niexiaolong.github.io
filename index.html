@@ -79,16 +79,16 @@
 
 
 
-<meta name="description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
+<meta name="description" content="问题能否解决，不取决于你的能力，而取决于你是否认为它可以被解决">
 <meta property="og:type" content="website">
 <meta property="og:title" content="nxl&#39;s Home">
 <meta property="og:url" content="http://yoursite.com/index.html">
 <meta property="og:site_name" content="nxl&#39;s Home">
-<meta property="og:description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
+<meta property="og:description" content="问题能否解决，不取决于你的能力，而取决于你是否认为它可以被解决">
 <meta property="og:locale" content="zh-Hans">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="nxl&#39;s Home">
-<meta name="twitter:description" content="问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决">
+<meta name="twitter:description" content="问题能否解决，不取决于你的能力，而取决于你是否认为它可以被解决">
 
 
 
@@ -355,46 +355,15 @@
       
         
           
-            <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。<br><img src="http://chuantu.biz/t6/311/1526374665x-1404764816.png" alt="image"><br>但这些其实并不是触动我们需要换MQ的因素，<strong>最大的因素是消息会丢（听说）</strong>。因为刚来公司没多久，老员工说消息明明有写入，但消费的程序就是没消费到，看生产的日志明明加了有好多消息了，但消费的日志就一直没打印过，并且到线上去查一下，发现队列又是空的。他们怀疑说是KEY太多了导致出现了LRU（就算LRU不应该是KEY直接没吗，怎么还留个空key？），并且说Redis本身也不是专业做队列的（这倒是认同），并且我们量大了，我们迟早也需要引入更专业的MQ（确实也如此）</p>
-<p>于是就开始了RabbitMQ的挖坑之旅。PS.有老铁知道上述可能导致的原因的，请告知我（别问我到底怎么丢的，我也母鸡啊，来了听他们说。我也就只知道这些信息 o(╥﹏╥)o）</p>
-<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>公司业务部署在上海、无锡、深圳，3个机房。估计是为了异地多活或考虑到延迟性（多半后者），我们的项目部在了这3个机房。由于支付在上海，所以与支付相关的，比如订单模块，我们就部署在上海，而上海机器又不多。<br>这样在跨机房背景下，我们其实并不是每个机房都有一套完备的服务</p>
-<p>MQ集群的部署，不仅考虑高可用，就还得考虑这个跨机房问题了。</p>
-<h1 id="集群架构"><a href="#集群架构" class="headerlink" title="集群架构"></a>集群架构</h1><h3 id="主从架构（常见）"><a href="#主从架构（常见）" class="headerlink" title="主从架构（常见）"></a>主从架构（常见）</h3><p><img src="http://chuantu.biz/t6/311/1526371248x-1566657591.png" alt="image"><br>这种架构模式是比较常见的一种跨机房架构设计。<strong>同机房读，跨机房写</strong>，跨机房MQ以federation插件进行同步（PS.federation是rabbitmq自带的一个插件，能在广域网情况下。比较好的处理这种数据同步）。当然如果我们想读写分离得更彻底一些，我们也可以再主节点机房再部署多个从节点（虚线中表示）。跨机房之间用专线连接，比较适合写少读多的场景。并且很多公司也是基于这种模式，部署他们的跨机房应用。所以大家不要觉得这种模式就很糟，其实也是一种比较不错的设计方案。</p>
-<p>目前我们线上的Redis集群、Mysql集群，也都是基于这种模式来进行部署。我们这次部署我们的MQ，如果采用这种模式，其实有好也有坏。<br>好处自然有一点是稳定，毕竟线上的集群都是这样的模式，如果不能支持线上的服务，那自然早就暴露出问题了。这种一主多从的方案还有一个好处就是管理方便，因为只会存在一个地方做写入，其他地方也只是全量COPY。架构简单，对后期维护的成本也友好。<br>坏处其实也不是MQ的坏处，而是这种架构模式的坏处。非主节点机房的应用，写消息必须得跨机房写，耗时久，并且容易丢失。我们用MQ的方式，就是希望能很快的记录这样一个凭证，然后马上去忙其他的事情。</p>
-<p>那我们如何能让写也同样快呢？答案是：同机房写。<br>在如上的架构上，如果采用同机房写，不就是多主吗？多主之间的数据同步是异常复杂的，并且还要考虑到跨机房的多主，对运维，网络，研发都有着非常大的成本和挑战。这里不详细展开异地多主数据同步了，感兴趣的小伙伴可以去google一下。<br>那如果不采用多主，我们还能同机房写吗？答案是可以！</p>
-<h3 id="去中心化架构"><a href="#去中心化架构" class="headerlink" title="去中心化架构"></a>去中心化架构</h3><p><img src="http://chuantu.biz/t6/311/1526372758x-1566657591.png" alt="image"><br>这个架构是和团队成员一起讨论出来的，和上述架构的区别有点类似于服务治理中Eureka集群与Zookeeper集群一样。首先每个机房都有一个自己的MQ集群，每个集群中，有一个实例通过federation来与另外2个机房建立广域网上的数据同步通道。获取到消息内容后，该实例再将这条消息同步给到集群内的其他节点。</p>
-<p>这种架构就属于没有主，或者都是主，因为大家都在写。那我们怎么做多主的数据同步呢？其实我们没有做，规避掉了这种问题。<br>federation同步的是消息，消息事件是不会同步的，什么意思呢？就是说深圳写了一个消息，这个消息会通过federation同步到上海，如果深圳把这个消息消费了呢？这个消费事件是不会被同步的，也就是说深圳没了就没了，同步到上海的消息，依然安好无损的在那儿乖乖呆着。所以其实我们没有做这种正统的多主同步，或者叫伪多主同步吧，不过我还是习惯称他为去中心化。<br>那这种架构如何解决上述其问题，如果解决我们业务上会实际遇到的问题呢？</p>
-<h2 id="场景分析"><a href="#场景分析" class="headerlink" title="场景分析"></a>场景分析</h2><h5 id="1-消息写入逻辑"><a href="#1-消息写入逻辑" class="headerlink" title="1.消息写入逻辑"></a>1.消息写入逻辑</h5><p>不同机房rabbitmq集群写入的queue名称不同，同机房内，集群为镜像集群<br>如：深圳某业务产生队列-sz_luffy，无锡同样业务同样代码产生队列-wx_luffy。再通过federation将这2个队列同步至对方集群</p>
-<h5 id="2-消息同步逻辑"><a href="#2-消息同步逻辑" class="headerlink" title="2.消息同步逻辑"></a>2.消息同步逻辑</h5><p>P2P模式（一条消息只需要被一个消费者消费）：3个同步节点中，消息只会存在一份，消息可能同步到所有存在该队列的消费者节点上，P2P类型的消息，总体只会有一份<br>广播模式（一条消息需要被所有消费者消费）：消息同步后不会从主中移除，广播类型的消息，以副本形式，保存多份</p>
-<h5 id="3-消息负载均衡"><a href="#3-消息负载均衡" class="headerlink" title="3.消息负载均衡"></a>3.消息负载均衡</h5><p>“剪切”形式的同步，基于queue进行同步，rabbitmq会根据消费者消费速度来自动将消息分发给不同的节点，达到负载均衡的效果。<br>“复制”形式的同步，基于exchange进行同步，rabbitmq会将所有命中该正则的消息同步至对应节点。这时候可能会有个问题，如果上海有一个服务生产消费都是在上海，并且消费者也没有部署到其他机房，那不是会造成其他机房的广播消息会一直堆积吗？因为在其他机房没有消费者和生产者，自然也就不会有这个队列这个交换器，这样即使消息到达了，也是不能落地的。</p>
-<h5 id="4-消息重复消费"><a href="#4-消息重复消费" class="headerlink" title="4.消息重复消费"></a>4.消息重复消费</h5><p>对所有消息生成唯一的messageID。P2P模式，key=messageID，广播模式，key=host+messageID<br>通过数据库本地事务 or redis-setnx or zookeeper临时顺序节点，来判断消息是否有被消费过</p>
-<h5 id="5-同步通道单点隐患"><a href="#5-同步通道单点隐患" class="headerlink" title="5.同步通道单点隐患"></a>5.同步通道单点隐患</h5><p>由于通道的destination端是打在一个具体的节点上的，source连接的是一个集群（内部实现其实也只是一个具体的实例节点）。那如果我们架设通道的这个节点挂了，那这个通道也就断了，确实是会有单点隐患。<br>但其实如果该机房生产该消息的，和消费该消息的在同一个机房都有部署，其实也不会有问题。后续再加以监控报警，其实也可以一定程度上有所缓解。<br>其实RabbitMQ也有相应的HA方案，第一期不想做得那么复杂，所以这里就没有再继续深入，读者们感兴趣的，也可以深入去了解一下</p>
-<h2 id="实施细节"><a href="#实施细节" class="headerlink" title="实施细节"></a>实施细节</h2><p>具体的实施步骤如下，其实要做好，也还是要花一番功夫的，具体细节就不在这里一一赘述了，下面是我的实施计划，供大家参考，希望对大家有帮助 over~</p>
-<h5 id="前期细化方案的确立"><a href="#前期细化方案的确立" class="headerlink" title="前期细化方案的确立"></a>前期细化方案的确立</h5><ul>
-<li>集群架构</li>
-<li>路由规则</li>
-<li>消息规则</li>
-<li>负载均衡</li>
-<li>幂等机制</li>
-<li>监控方案</li>
-</ul>
-<h5 id="MQSDK封装"><a href="#MQSDK封装" class="headerlink" title="MQSDK封装"></a>MQSDK封装</h5><ul>
-<li>消息分发/消费SDK</li>
-<li>负载均衡策略</li>
-<li>队列/交换器适配</li>
-<li>重复校验判定</li>
-</ul>
-<h5 id="MQ监控"><a href="#MQ监控" class="headerlink" title="MQ监控"></a>MQ监控</h5><ul>
-<li>消息轨迹跟踪</li>
-<li>消息堆积报警</li>
-<li>消费异常报警</li>
-</ul>
-<h5 id="预发布-试运行"><a href="#预发布-试运行" class="headerlink" title="预发布/试运行"></a>预发布/试运行</h5><ul>
-<li>线上指标数据测试</li>
-<li>线上原有消息过渡方案</li>
-</ul>
-
-          
+          前言消息队列很多公司都会用到，我们公司也遇到了这样的业务。起初我们是基于Redis来做的轻量级消息队列，基于lpush/brpop。当然redis来做消息队列会有各种问题，比如没有ACK，得程序手动来操作，失败了需要手动再push等。但这些其实并不是触动我们需要换MQ的因素，最大的因素是消息会丢（听
+          ...
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2018/05/15/rabbitmq-cluster-multi-datacenter/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
         
       
     </div>
@@ -468,7 +437,7 @@
                 alt="聂晓龙" />
             
               <p class="site-author-name" itemprop="name">聂晓龙</p>
-              <p class="site-description motion-element" itemprop="description">问题是否可以解决，不取决于你的能力，而取决于你是否认为它可以被解决</p>
+              <p class="site-description motion-element" itemprop="description">问题能否解决，不取决于你的能力，而取决于你是否认为它可以被解决</p>
           </div>
 
           <nav class="site-state motion-element">
